@@ -20,6 +20,7 @@
 
 struct sht40_data {
 	struct i2c_client *client;
+
 };
 
 static ssize_t hello_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -76,5 +77,7 @@ static struct i2c_driver sht40_driver = {
 module_i2c_driver(sht40_driver);
 
 MODULE_DESCRIPTION("Simple skeleton driver for Sensorion SHT4x sensors");
+MODULE_AUTHOR("Jules Irenge<jbi.octave@gmail.com>");
 MODULE_AUTHOR("Hans de Goede <hansg@kernel.org>");
+
 MODULE_LICENSE("GPL");
