@@ -23,6 +23,45 @@ struct sht40_data {
 
 };
 
+// in Progress 
+
+static int perform_i2c_operations(struct i2c_client *client) {
+	struct device *dev = &client->dev;
+
+	int ret;
+
+	// Write a byte to the I2C client
+	ret = i2c_smbus_write_byte(client, 0x89);
+
+	if (ret < 0) {
+		dev_err(dev, "Write byte error: %d\n", ret);
+		return ret;
+	}
+
+	// Wait for 1 ms
+	usleep_range(1000, 1001);  // Equivalent to fsleep(1 * USEC_PER_MSEC)
+
+	// Read 6 bytes from the I2C client
+	ret = i2c_transfer_buffer_flags(client, resp, 6, I2C_M_RD);
+	if (ret != 6) {
+		dev_err(dev, "Read bytes error: %d\n", ret);
+		return (ret < 0) ? ret : -EIO;
+	}
+
+	return 0;  // Success
+}
+
+// In progress
+
+static ssize_t temp_show(struct device *dev, struct device_attribute *attr, char *buf)
+
+{
+	struct sht40_data *data = dev_get_drvdata(dev);
+
+	if (perform_i2c_operations(data->client, ))
+		return -EIO;
+}
+
 static ssize_t hello_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct sht40_data *data = dev_get_drvdata(dev);
@@ -36,10 +75,20 @@ static ssize_t world_show(struct device *dev, struct device_attribute *attr, cha
 	return sysfs_emit(buf, "Hello World\n");
 }
 static DEVICE_ATTR_RO(world);
+static ssize_t serialno_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	//char resp[6];
+
+	return sysfs_emit(buf, "%02x%02x%02x%02x\n", resp[0], resp[1], resp[3], resp[4]);
+}
+
+static DEVICE_ATTR_RO(serialno);
+
 
 static struct attribute *sht40_attrs[] = {
 	&dev_attr_hello.attr,
 	&dev_attr_world.attr,
+	&dev_attr_serialno.attr,
 	NULL
 };
 ATTRIBUTE_GROUPS(sht40);
