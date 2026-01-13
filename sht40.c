@@ -17,6 +17,8 @@
 #else
 #include <linux/unaligned.h>
 #endif
+#define PRECISION 0xFD 
+#define SERIALNO 0x89
 
 struct sht40_data {
 	struct i2c_client *client;
@@ -25,13 +27,15 @@ struct sht40_data {
 
 // in Progress 
 
-static int perform_i2c_operations(struct i2c_client *client) {
+char resp[6];
+
+static int perform_i2c_operations(struct i2c_client *client, int sn) {
 	struct device *dev = &client->dev;
 
 	int ret;
 
 	// Write a byte to the I2C client
-	ret = i2c_smbus_write_byte(client, 0x89);
+	ret = i2c_smbus_write_byte(client, sn );
 
 	if (ret < 0) {
 		dev_err(dev, "Write byte error: %d\n", ret);
@@ -57,11 +61,15 @@ static ssize_t temp_show(struct device *dev, struct device_attribute *attr, char
 
 {
 	struct sht40_data *data = dev_get_drvdata(dev);
+	int s = SERIALNO;
 
-	if (perform_i2c_operations(data->client, ))
+	if (perform_i2c_operations(data->client, s))
 		return -EIO;
+	int temp = get_unaligned_be16(&resp[0]);
+	temp = (temp * (175)/(65536 - 1)) - 45;
+	return sysfs_emit(buf, "%d.%d° Celsius\n", temp / 10, temp % 10);
 }
-
+static DEVICE_ATTR_RO(temp);
 static ssize_t hello_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct sht40_data *data = dev_get_drvdata(dev);
@@ -78,6 +86,12 @@ static DEVICE_ATTR_RO(world);
 static ssize_t serialno_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	//char resp[6];
+	struct sht40_data *data = dev_get_drvdata(dev);
+	int s = SERIALNO;
+	
+	if(perform_i2c_operations(data->client, s))
+                return -EIO;
+
 
 	return sysfs_emit(buf, "%02x%02x%02x%02x\n", resp[0], resp[1], resp[3], resp[4]);
 }
@@ -89,6 +103,7 @@ static struct attribute *sht40_attrs[] = {
 	&dev_attr_hello.attr,
 	&dev_attr_world.attr,
 	&dev_attr_serialno.attr,
+	&dev_attr_temp.attr,
 	NULL
 };
 ATTRIBUTE_GROUPS(sht40);
@@ -103,6 +118,9 @@ static int sht40_probe(struct i2c_client *client)
 		return -ENOMEM;
 
 	data->client = client;
+
+//	if(perform_i2c_operations(dev))
+//		return -EIO;
 
 	dev_info(dev, "SHT4x sensor probe success\n");
 	i2c_set_clientdata(client, data);
